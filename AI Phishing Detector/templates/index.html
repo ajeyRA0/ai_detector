@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PhishGuard | AI Phishing URL Detection</title>
+  <meta name="description" content="College CSE Project: Explainable AI-powered phishing URL detection using 15 lexical and structural URL features without making network calls.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <!-- Header & Navigation -->
+  <header class="app-header">
+    <div class="container header-container">
+      <div class="brand">
+        <div class="brand-icon">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+            <path d="M9 12l2 2 4-4"/>
+          </svg>
+        </div>
+        <div class="brand-text">
+          <span class="brand-title">PhishGuard</span>
+          <span class="brand-tag">AI Lexical URL Shield</span>
+        </div>
+      </div>
+      <nav class="nav-links">
+        <a href="#scanner-section" class="nav-link active">Scanner</a>
+        <a href="#bulk-section" class="nav-link">Bulk Check</a>
+        <a href="#history-section" class="nav-link">History</a>
+        <a href="/model" class="nav-link highlight">Model & Viva Docs &rarr;</a>
+      </nav>
+    </div>
+  </header>
+
+  <!-- Hero Notice Banner -->
+  <div class="security-strip">
+    <div class="container security-strip-content">
+      <span class="shield-dot"></span>
+      <span><strong>Zero-Network Guarantee:</strong> PhishGuard inspects URLs strictly offline using lexical syntax. The server <em>never</em> connects to or requests the analyzed URL.</span>
+      {% if is_synthetic %}
+      <span class="demo-badge">Demo Mode (Synthetic Data)</span>
+      {% else %}
+      <span class="demo-badge prod">Benchmark Mode (PhishTank Data)</span>
+      {% endif %}
+    </div>
+  </div>
+
+  <main class="container main-content">
+    <!-- Hero Intro -->
+    <section class="hero-section">
+      <h1 class="hero-title">AI-Powered Phishing URL Detection</h1>
+      <p class="hero-subtitle">
+        Instant classification driven by a <strong>{{ model_name }}</strong> evaluating 15 structural and lexical URL characteristics. Explainable, fast, and secure.
+      </p>
+    </section>
+
+    <!-- URL Scanner Section -->
+    <section id="scanner-section" class="card scanner-card">
+      <div class="card-header">
+        <h2 class="card-title">Inspect URL</h2>
+        <span class="card-subtitle">Paste any link to analyze its structural risk factors</span>
+      </div>
+
+      <form id="scan-form" class="scan-form">
+        <div class="input-wrapper">
+          <div class="input-icon">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="11" cy="11" r="8"/>
+              <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+            </svg>
+          </div>
+          <input
+            type="text"
+            id="url-input"
+            name="url"
+            class="url-input"
+            placeholder="e.g. https://secure-account-verification-alert.com/login"
+            autocomplete="off"
+            required
+            maxlength="2048"
+          />
+          <button type="button" id="clear-btn" class="btn-icon" title="Clear input" aria-label="Clear URL input">
+            &times;
+          </button>
+        </div>
+        <button type="submit" id="analyze-btn" class="btn btn-primary">
+          <span class="btn-text">Analyze URL</span>
+          <span class="spinner" id="btn-spinner" hidden></span>
+        </button>
+      </form>
+
+      <!-- Quick Test Examples -->
+      <div class="examples-wrapper">
+        <span class="examples-label">Try sample URLs:</span>
+        <div class="examples-group">
+          <span class="group-tag legit">Legitimate:</span>
+          <button type="button" class="pill-btn legit" data-url="https://www.google.com">google.com</button>
+          <button type="button" class="pill-btn legit" data-url="https://github.com/torvalds/linux">github.com/torvalds</button>
+          <button type="button" class="pill-btn legit" data-url="https://en.wikipedia.org/wiki/Phishing">wikipedia.org/wiki</button>
+        </div>
+        <div class="examples-group">
+          <span class="group-tag phish">Phishing:</span>
+          <button type="button" class="pill-btn phish" data-url="http://192.168.1.1/login/admin">Raw IP Address</button>
+          <button type="button" class="pill-btn phish" data-url="https://paypal.com@verify-account-security.xyz/login">@ Symbol Spoof</button>
+          <button type="button" class="pill-btn phish" data-url="http://chase-bank-verify-security-alert.top/signin.php?session=928472">Typosquat & Lures</button>
+        </div>
+      </div>
+
+      <!-- Error Message Banner -->
+      <div id="error-banner" class="alert-box error" hidden>
+        <span class="alert-icon">&excl;</span>
+        <span id="error-text">An error occurred during analysis.</span>
+      </div>
+    </section>
+
+    <!-- Results Section (Initially Hidden) -->
+    <section id="results-section" class="results-container" hidden>
+      <!-- Verdict Banner -->
+      <div id="verdict-banner" class="verdict-card">
+        <div class="verdict-main">
+          <div class="verdict-status-icon" id="verdict-icon">
+            <!-- Icon dynamically updated -->
+          </div>
+          <div class="verdict-text-group">
+            <div class="verdict-badges">
+              <span id="verdict-pill" class="badge">Verdict</span>
+              <span id="risk-pill" class="badge">Risk Level</span>
+              <span id="confidence-pill" class="badge-outline">Confidence: 0.0%</span>
+            </div>
+            <h2 id="verdict-title" class="verdict-title">Analysis Complete</h2>
+            <p id="verdict-url" class="verdict-url mono"></p>
+          </div>
+        </div>
+
+        <div class="verdict-actions">
+          <button type="button" id="open-report-btn" class="btn btn-secondary btn-sm">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/>
+              <line x1="4" y1="22" x2="4" y2="15"/>
+            </svg>
+            Report URL Feedback
+          </button>
+        </div>
+      </div>
+
+      <!-- Risk Meter & Reasons Grid -->
+      <div class="analysis-grid">
+        <!-- Probability Gauge Card -->
+        <div class="card meter-card">
+          <h3 class="card-subtitle-small">Phishing Probability Assessment</h3>
+          <div class="meter-content">
+            <div class="meter-percentage" id="meter-percent-display">0.0%</div>
+            <div class="progress-bar-container">
+              <div class="progress-bar-fill" id="meter-fill" style="width: 0%;"></div>
+            </div>
+            <div class="meter-legend">
+              <span class="legend-item safe">0% (Safe)</span>
+              <span class="legend-item moderate">50% (Threshold)</span>
+              <span class="legend-item danger">100% (Phishing)</span>
+            </div>
+          </div>
+          <p class="meter-note" id="meter-explanation">
+            Model threshold is 0.50. URLs with &ge; 50% probability are classified as phishing threats.
+          </p>
+        </div>
+
+        <!-- Plain Language Reasons Card -->
+        <div class="card reasons-card">
+          <h3 class="card-subtitle-small">Explainable Signals (XAI)</h3>
+          <ul id="reasons-list" class="reasons-list">
+            <!-- Dynamically populated -->
+          </ul>
+        </div>
+      </div>
+
+      <!-- 15 Features Table -->
+      <div class="card">
+        <div class="card-header-flex">
+          <div>
+            <h3 class="card-title">Extracted Lexical & Structural Features (15 Total)</h3>
+            <span class="card-subtitle">Real-time parameters extracted strictly from URL string without network calls</span>
+          </div>
+          <span class="tag-counter">15 Features Extracted</span>
+        </div>
+        <div class="table-responsive">
+          <table class="features-table" id="features-table">
+            <thead>
+              <tr>
+                <th scope="col">Feature Name</th>
+                <th scope="col">Extracted Value</th>
+                <th scope="col">Threat Heuristic Interpretation</th>
+                <th scope="col">Status</th>
+              </tr>
+            </thead>
+            <tbody id="features-tbody">
+              <!-- Dynamically populated rows -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Feature Importance Card -->
+      <div class="card">
+        <div class="card-header-flex">
+          <div>
+            <h3 class="card-title">Global Model Feature Influence</h3>
+            <span class="card-subtitle">Trained {{ model_name }} feature importance distribution</span>
+          </div>
+          <a href="/model" class="link-muted">View full model specs &rarr;</a>
+        </div>
+        <div id="importance-bars-container" class="importance-bars-container">
+          <!-- Dynamically populated bars -->
+        </div>
+      </div>
+    </section>
+
+    <!-- Bulk Check Section -->
+    <section id="bulk-section" class="card bulk-card">
+      <div class="card-header-flex">
+        <div>
+          <h2 class="card-title">Bulk URL Analysis</h2>
+          <span class="card-subtitle">Inspect multiple URLs at once (paste up to 100 links or upload a CSV file)</span>
+        </div>
+        <div class="bulk-header-actions">
+          <label class="btn btn-secondary btn-sm file-upload-label">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+              <polyline points="17 8 12 3 7 8"/>
+              <line x1="12" y1="3" x2="12" y2="15"/>
+            </svg>
+            Upload CSV/TXT
+            <input type="file" id="bulk-file-input" accept=".csv,.txt" hidden>
+          </label>
+        </div>
+      </div>
+
+      <div class="bulk-form">
+        <textarea
+          id="bulk-textarea"
+          class="bulk-textarea mono"
+          rows="5"
+          placeholder="Paste URLs here, one per line:&#10;https://www.google.com&#10;http://192.168.1.1/admin&#10;https://paypal.com@evil-site.xyz/login&#10;https://github.com"
+        ></textarea>
+        <div class="bulk-actions">
+          <button type="button" id="bulk-scan-btn" class="btn btn-primary">
+            Scan Bulk URLs
+          </button>
+          <button type="button" id="bulk-clear-btn" class="btn btn-ghost">
+            Clear
+          </button>
+          <button type="button" id="bulk-download-btn" class="btn btn-secondary" disabled>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+              <polyline points="7 10 12 15 17 10"/>
+              <line x1="12" y1="15" x2="12" y2="3"/>
+            </svg>
+            Download Results CSV
+          </button>
+        </div>
+      </div>
+
+      <!-- Bulk Results Table -->
+      <div id="bulk-results-wrapper" class="table-responsive" hidden>
+        <table class="features-table" id="bulk-table">
+          <thead>
+            <tr>
+              <th scope="col">#</th>
+              <th scope="col">URL</th>
+              <th scope="col">Verdict</th>
+              <th scope="col">Risk Level</th>
+              <th scope="col">Phishing Prob</th>
+              <th scope="col">Confidence</th>
+            </tr>
+          </thead>
+          <tbody id="bulk-tbody">
+            <!-- Populated via JS -->
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- Scan History Section -->
+    <section id="history-section" class="card history-card">
+      <div class="card-header-flex">
+        <div>
+          <h2 class="card-title">Local Scan History</h2>
+          <span class="card-subtitle">Stored in your browser's localStorage (last 20 checks)</span>
+        </div>
+        <button type="button" id="clear-history-btn" class="btn btn-ghost btn-sm text-danger">
+          Clear History
+        </button>
+      </div>
+
+      <div id="history-empty" class="empty-state">
+        <p>No recent scans yet. Analyze a URL above to start building your history.</p>
+      </div>
+
+      <div id="history-table-wrapper" class="table-responsive" hidden>
+        <table class="features-table">
+          <thead>
+            <tr>
+              <th scope="col">Timestamp</th>
+              <th scope="col">URL</th>
+              <th scope="col">Verdict</th>
+              <th scope="col">Probability</th>
+              <th scope="col">Action</th>
+            </tr>
+          </thead>
+          <tbody id="history-tbody">
+            <!-- Populated via JS -->
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- Academic Viva Note Card -->
+    <section class="card note-card">
+      <div class="note-header">
+        <div class="note-icon">&starf;</div>
+        <h3 class="card-title">Academic & Viva Defense Notes</h3>
+      </div>
+      <p class="note-body">
+        <strong>Why Lexical URL Features Only?</strong> Phishing campaigns frequently deploy zero-day server setups that evade network crawlers by checking visitor IP headers or blocking automated bots (bot cloaking). Lexical and structural inspection is instantaneous (sub-millisecond), operates completely air-gapped without leaking user browsing habits to external networks, and cannot be tricked by dynamic page redirects.
+      </p>
+      <div class="note-footer">
+        <span>Curious about performance metrics and Logistic Regression vs Random Forest?</span>
+        <a href="/model" class="btn btn-secondary btn-sm">Read Model Evaluation &amp; Viva Q&amp;A &rarr;</a>
+      </div>
+    </section>
+  </main>
+
+  <!-- Feedback Modal -->
+  <div id="feedback-modal" class="modal-backdrop" hidden>
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3 class="modal-title">Report URL Classification</h3>
+        <button type="button" id="close-modal-btn" class="modal-close">&times;</button>
+      </div>
+      <form id="feedback-form" class="modal-form">
+        <div class="form-group">
+          <label for="feedback-url" class="form-label">Reported URL:</label>
+          <input type="text" id="feedback-url" class="form-input mono" readonly>
+        </div>
+        <div class="form-group">
+          <label class="form-label">What is the actual correct classification?</label>
+          <div class="radio-group">
+            <label class="radio-label">
+              <input type="radio" name="suggested_label" value="legitimate" checked>
+              <span>Legitimate (Benign)</span>
+            </label>
+            <label class="radio-label">
+              <input type="radio" name="suggested_label" value="phishing">
+              <span>Phishing (Malicious)</span>
+            </label>
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="feedback-notes" class="form-label">Notes / Reasons (Optional):</label>
+          <textarea id="feedback-notes" class="form-textarea" rows="3" placeholder="e.g. False positive: This is a legitimate internal intranet portal."></textarea>
+        </div>
+        <div id="feedback-status" class="alert-box success" hidden></div>
+        <div class="modal-actions">
+          <button type="button" id="cancel-modal-btn" class="btn btn-ghost">Cancel</button>
+          <button type="submit" id="submit-feedback-btn" class="btn btn-primary">Submit to feedback.csv</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <footer class="app-footer">
+    <div class="container footer-content">
+      <p>PhishGuard &bull; B.Tech Computer Science &amp; Engineering Final Project</p>
+      <p class="footer-sub">Built with Python, Flask, scikit-learn, and Vanilla JavaScript &bull; Explainable Cyber Defense</p>
+    </div>
+  </footer>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>
